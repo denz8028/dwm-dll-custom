@@ -72,11 +72,12 @@ static const Layout layouts[] = {
 static char dmenumon[2] = "0"; /* component of dmenucmd, manipulated in spawn() */
 static const char *dmenucmd[] = { "dmenu_run", "-m", dmenumon, "-fn", dmenufont, "-nb", col_gray1, "-nf", col_gray3, "-sb", col_cyan, "-sf", col_gray4, NULL };
 static const char *termcmd[]  = { "x-terminal-emulator", NULL };
-
+static const char *flameshot[]  = { "flameshot", "full", "--clipboard", NULL };
 #include "selfrestart.c"
 
 static const Key keys[] = {
 	/* modifier                     key        function        argument */
+	{ 0,						XK_Print,	spawn,			{.v = flameshot } },
 	{ MODKEY,                       XK_p,      spawn,          {.v = dmenucmd } },
 	{ MODKEY,             XK_Return, spawn,          {.v = termcmd } },
 	{ MODKEY,                       XK_b,      togglebar,      {0} },

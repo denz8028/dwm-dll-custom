@@ -514,10 +514,24 @@ buttonpress(XEvent *e)
 			arg.ui = 1 << i;
 		} else if (ev->x < x + TEXTW(selmon->ltsymbol))
 			click = ClkLtSymbol;
-		else if (ev->x > selmon->ww - (int)TEXTW(stext) - getsystraywidth())
+		//else if (ev->x > selmon->ww - (int)TEXTW(stext) - getsystraywidth())
+		else if (ev->x > selmon->ww - TEXTW(stext) + lrpad - 2)
 			click = ClkStatusText;
-		else
+		else {
+			x += TEXTW(selmon->ltsymbol);
+			c = m->clients;
+
+			if (c) {
+					do {
+						if (!ISVISIBLE(c))
+							continue;
+						else
+							x +=(1.0 / (double)m->bt) * m->btw;
+						}
+			 while (ev->x > x && (c = c->next)); }
 			click = ClkWinTitle;
+			arg.v = c;
+			}
 	} else if ((c = wintoclient(ev->window))) {
 		// focus(c);
 		// restack(selmon);
@@ -877,16 +891,36 @@ drawbar(Monitor *m)
 	x = drw_text(drw, x, 0, w, bh, lrpad / 2, m->ltsymbol, 0);
 
 	if ((w = m->ww - tw - stw - x) > bh) {
-		if (m->sel) {
-			drw_setscheme(drw, scheme[m == selmon ? SchemeSel : SchemeNorm]);
-			drw_text(drw, x, 0, w, bh, lrpad / 2, m->sel->name, 0);
-			if (m->sel->isfloating)
-				drw_rect(drw, x + boxs, boxs, boxw, boxw, m->sel->isfixed, 0);
+
+		if (n > 0) {
+			int remainder = w % n;
+			int tabw = (1.0 / (double)n) * w + 1;
+			for (c = m->clients; c; c = c->next) {
+				if (!ISVISIBLE(c))
+					continue;
+				if (m->sel == c)
+					scm = SchemeSel;
+				else if (HIDDEN(c))
+					scm = SchemeHid;
+				else
+					scm = SchemeNorm;
+				drw_setscheme(drw, scheme[scm]);
+				if (remainder >= 0) {
+					if (remainder == 0) {
+						tabw--;
+					}
+					remainder--;
+				}
+				drw_text(drw, x, 0, tabw, bh, lrpad / 2, c->name, 0);
+				x += tabw;
+			}
 		} else {
 			drw_setscheme(drw, scheme[SchemeNorm]);
 			drw_rect(drw, x, 0, w, bh, 1, 1);
 		}
 	}
+	m->bt = n;
+	m->btw = w;
 	drw_map(drw, m->barwin, 0, 0, m->ww - stw, bh);
 }
 
@@ -939,7 +973,6 @@ focus(Client *c)
 		for (c = selmon->stack; c && (!ISVISIBLE(c) || HIDDEN(c)); c = c->snext);
 	if (selmon->sel && selmon->sel != c) {
 		unfocus(selmon->sel, 0);
-
 		if (selmon->hidsel) {
 			hidewin(selmon->sel);
 			if (c)
